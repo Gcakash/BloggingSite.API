@@ -7,7 +7,7 @@ namespace BloggingSite.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    //[Authorize]
     public class CategoryController : ControllerBase
     {
         // GET: api/<CategoryController>

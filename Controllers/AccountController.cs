@@ -38,7 +38,7 @@ namespace BloggingSite.API.Controllers
             return Unauthorized("Invalid username or password");
         }
 
-        [Authorize(Roles = "Admin")]
+       // [Authorize(Roles = "Admin")]
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
         {

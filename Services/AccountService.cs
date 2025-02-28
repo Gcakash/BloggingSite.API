@@ -1,4 +1,5 @@
-﻿using BloggingSite.API.DTOs;
+﻿using AutoMapper;
+using BloggingSite.API.DTOs;
 using BloggingSite.API.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -13,28 +14,25 @@ namespace BloggingSite.API.Services
     {
         Task<IdentityResult> RegisterUser(RegisterModel model);
         Task<string> LoginUser(LoginModel model);
-        Task<List<UserDto>> GetAllUsers();
+        Task<List<UserModel>> GetAllUsers();
     }
 
     public class AccountService : IAccountService
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IConfiguration _configuration;
+        private readonly IMapper _mapper;
 
-        public AccountService(UserManager<ApplicationUser> userManager, IConfiguration configuration)
+        public AccountService(UserManager<ApplicationUser> userManager, IConfiguration configuration, IMapper mapper)
         {
             _userManager = userManager;
             _configuration = configuration;
+            _mapper = mapper;
         }
 
         public async Task<IdentityResult> RegisterUser(RegisterModel model)
         {
-            var user = new ApplicationUser
-            {
-                UserName = model.Username,
-                Email = model.Email
-            };
-
+            var user = _mapper.Map<ApplicationUser>(model);
             var result = await _userManager.CreateAsync(user, model.Password);
             return result;
         }
@@ -50,16 +48,24 @@ namespace BloggingSite.API.Services
             return null;
         }
 
-        public async Task<List<UserDto>> GetAllUsers()
+        public async Task<List<UserModel>> GetAllUsers()
         {
-            var users = await _userManager.Users.Select(user => new UserDto
-            {
-                Id = user.Id,
-                Username = user.UserName,
-                Email = user.Email
-            }).ToListAsync();
+            var users = await _userManager.Users.ToListAsync();
+            var userDtos = _mapper.Map<List<UserModel>>(users);
 
-            return users;
+            foreach (var userDto in userDtos)
+            {
+                var user = await _userManager.FindByIdAsync(userDto.Id);
+                if(user != null)
+                {
+                    var roles = await _userManager.GetRolesAsync(user);
+                    if(roles != null)
+                    {
+                        userDto.UserRole = roles.FirstOrDefault();
+                    }
+                }
+            }
+            return userDtos;
         }
 
         private string GenerateJwtToken(ApplicationUser user)
@@ -86,12 +92,5 @@ namespace BloggingSite.API.Services
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-    }
-
-    public class UserDto
-    {
-        public string Id { get; set; }
-        public string Username { get; set; }
-        public string Email { get; set; }
     }
 }
